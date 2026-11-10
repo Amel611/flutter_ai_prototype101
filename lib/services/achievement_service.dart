@@ -68,7 +68,11 @@ class AchievementService {
     }
   }
 
-  /// Unlock an achievement and award its XP.
+  /// Unlock an achievement.
+  ///
+  /// Supabase automatically awards 100 XP through the
+  /// award_achievement_xp database trigger.
+  /// Flutter must not award XP separately.
   Future<void> unlockAchievement(
     Map<String, dynamic> achievement,
   ) async {
@@ -79,10 +83,13 @@ class AchievementService {
     }
 
     final achievementId = achievement['id'];
-    final xpReward = (achievement['xp_reward'] as num?)?.toInt() ?? 0;
+
+    if (achievementId == null) {
+      throw Exception('Invalid achievement ID.');
+    }
 
     try {
-      // Check whether this achievement is already unlocked.
+      // Check whether the achievement is already unlocked.
       final existing = await _supabase
           .from('user_achievements')
           .select('id')
@@ -94,33 +101,11 @@ class AchievementService {
         return;
       }
 
-      // Record the unlocked achievement.
+      // Insert the unlocked achievement.
+      // The database trigger automatically awards 100 XP.
       await _supabase.from('user_achievements').insert({
         'user_id': user.id,
         'achievement_id': achievementId,
-      });
-
-      // Read the user's existing XP record.
-      final currentXP = await _supabase
-          .from('user_xp')
-          .select('total_xp, level')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-      final oldXP =
-          (currentXP?['total_xp'] as num?)?.toInt() ?? 0;
-
-      final newXP = oldXP + xpReward;
-
-      // One level for every 100 XP, starting at level 1.
-      final newLevel = (newXP ~/ 100) + 1;
-
-      // Create or update the user's XP record.
-      await _supabase.from('user_xp').upsert({
-        'user_id': user.id,
-        'total_xp': newXP,
-        'level': newLevel,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
     } catch (e) {
       throw Exception('Could not unlock achievement: $e');
