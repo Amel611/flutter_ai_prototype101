@@ -1,12 +1,12 @@
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'wellness_ai_test_screen.dart';
+
 import 'profile_screens.dart';
 import 'workout_history_screen.dart';
 import 'progress_screen.dart';
 import 'achievements_screen.dart';
-
+import 'wellness_ai_test_screen.dart';
 // ==========================================
 // AUTHENTICATION SCREEN
 // ==========================================
@@ -299,14 +299,14 @@ class WellnessHomeScreen extends StatelessWidget {
     );
   }
 
-  void _openWellnessAI(BuildContext context) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const WellnessAITestScreen(),
-    ),
-  );
-}
+  void _openWellnessAITest(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const WellnessAITestScreen(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -414,24 +414,22 @@ class WellnessHomeScreen extends StatelessWidget {
                 color: Colors.orange,
                 onTap: () => _openAchievements(context),
               ),
+            
 
-              const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-              // 5. WELLNESS AI
+            _DashboardCard(
+             title: 'Wellness AI Test',
+             description:
+             'Chat with your AI wellness assistant for fitness nutrition and personalized wellness guidance.',
+             icon: Icons.smart_toy_outlined,
+             color:Colors.pink,
+             onTap: () => _openWellnessAITest(context),
+            ),
 
-const SizedBox(height: 16),
-
-_DashboardCard(
-  title: 'Wellness AI',
-  description:
-      'Chat with your AI wellness assistant for fitness, '
-      'nutrition and personalized wellness guidance.',
-  icon: Icons.smart_toy_outlined,
-  color: Colors.pink,
-  onTap: () => _openWellnessAI(context),
-),
-
-const SizedBox(height: 24),
+            
+            
+            const SizedBox(height: 24),
 
               const Divider(),
 

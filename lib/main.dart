@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'screens/auth_screen.dart';
@@ -9,10 +10,11 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: 'https://nmawimakwlutcmxmmfmh.supabase.co',
-    publishableKey: 'sb_publishable_wIylibm1mnnNo8To9ibx-g_6EwjXS5e');
+    publishableKey: 'sb_publishable_wIylibm1mnnNo8To9ibx-g_6EwjXS5e',
+  );
 
   runApp(const WellnessAIApp());
-} 
+}
 
 class WellnessAIApp extends StatelessWidget {
   const WellnessAIApp({super.key});
@@ -22,12 +24,25 @@ class WellnessAIApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Interactive Social Wellness App',
+
+      // Localization configuration
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('ar'),
+      ],
+
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color.fromARGB(205, 149, 12, 154),
         ),
         useMaterial3: true,
       ),
+
       home: Supabase.instance.client.auth.currentSession == null
           ? const AuthScreen()
           : const WellnessHomeScreen(),

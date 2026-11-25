@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../services/wellness_ai_service.dart';
 
 class WellnessAITestScreen extends StatefulWidget {
@@ -10,7 +11,8 @@ class WellnessAITestScreen extends StatefulWidget {
       _WellnessAITestScreenState();
 }
 
-class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
+class _WellnessAITestScreenState
+    extends State<WellnessAITestScreen> {
   final WellnessAIService _aiService = WellnessAIService();
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -32,6 +34,16 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
 
     if (message.isEmpty || _loading) return;
 
+    // Collect previous messages, excluding the welcome message and errors.
+    final history = _messages
+        .skip(1)
+        .where((chatMessage) => !chatMessage.isError)
+        .map((chatMessage) => {
+              'role': chatMessage.isUser ? 'user' : 'assistant',
+              'content': chatMessage.text,
+            })
+        .toList();
+
     setState(() {
       _messages.add(_ChatMessage(text: message, isUser: true));
       _controller.clear();
@@ -41,12 +53,17 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
     _scrollToBottom();
 
     try {
-      final reply = await _aiService.sendMessage(message);
+      final reply = await _aiService.sendMessage(
+        message,
+        history: history,
+      );
 
       if (!mounted) return;
 
       setState(() {
-        _messages.add(_ChatMessage(text: reply, isUser: false));
+        _messages.add(
+          _ChatMessage(text: reply, isUser: false),
+        );
       });
     } catch (error) {
       if (!mounted) return;
@@ -88,18 +105,18 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
   Future<void> _clearConversation() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Clear conversation?'),
         content: const Text(
           'This will clear all messages from this chat session.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Clear'),
           ),
         ],
@@ -117,6 +134,8 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
         ),
       );
     });
+
+    _scrollToBottom();
   }
 
   @override
@@ -157,7 +176,7 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
               itemCount: _messages.length + (_loading ? 1 : 0),
               itemBuilder: (context, index) {
                 if (_loading && index == _messages.length) {
-                  return _buildTypingIndicator(primaryColor);
+                  return _buildTypingIndicator();
                 }
 
                 return _buildMessageBubble(
@@ -194,7 +213,8 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
                       decoration: InputDecoration(
                         hintText: 'Message Wellness AI...',
                         filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest,
+                        fillColor:
+                            theme.colorScheme.surfaceContainerHighest,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 18,
                           vertical: 12,
@@ -241,7 +261,20 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
     _ChatMessage message,
     Color primaryColor,
   ) {
+    final theme = Theme.of(context);
     final isUser = message.isUser;
+
+    final bubbleColor = isUser
+        ? primaryColor
+        : message.isError
+            ? Colors.red.withValues(alpha: 0.08)
+            : theme.colorScheme.surfaceContainerHighest;
+
+    final textColor = isUser
+        ? theme.colorScheme.onPrimary
+        : message.isError
+            ? Colors.red
+            : theme.colorScheme.onSurface;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -270,13 +303,7 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: isUser
-                    ? primaryColor
-                    : message.isError
-                        ? Colors.red.withValues(alpha: 0.08)
-                        : Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
+                color: bubbleColor,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -284,17 +311,24 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
                   bottomRight: Radius.circular(isUser ? 4 : 18),
                 ),
               ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  color: isUser
-                      ? Theme.of(context).colorScheme.onPrimary
-                      : message.isError
-                          ? Colors.red
-                          : Theme.of(context).colorScheme.onSurface,
-                  height: 1.4,
-                ),
-              ),
+              child: isUser || message.isError
+                  ? Text(
+                      message.text,
+                      style: TextStyle(
+                        color: textColor,
+                        height: 1.4,
+                      ),
+                    )
+                  : MarkdownBody(
+                      data: message.text,
+                      styleSheet: MarkdownStyleSheet.fromTheme(theme)
+                          .copyWith(
+                        p: TextStyle(
+                          color: textColor,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
             ),
           ),
 
@@ -304,7 +338,9 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
     );
   }
 
-  Widget _buildTypingIndicator(Color primaryColor) {
+  Widget _buildTypingIndicator() {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
@@ -325,7 +361,7 @@ class _WellnessAITestScreenState extends State<WellnessAITestScreen> {
               vertical: 12,
             ),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(18),
             ),
             child: const SizedBox(
