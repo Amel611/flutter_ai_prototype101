@@ -1,5 +1,5 @@
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 import '../services/achievement_service.dart';
 
 class AchievementsScreen extends StatefulWidget {
